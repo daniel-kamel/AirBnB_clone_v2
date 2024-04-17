@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, Integer, String, DateTime
 
 Base = declarative_base()
 
@@ -16,6 +16,7 @@ class BaseModel:
         DateTime, nullable=False, default=datetime.utcnow())
     updated_at = Column(
         DateTime, nullable=False, default=datetime.utcnow())
+
     def __init__(self, *args, **kwargs):
         """Instatntiates a new model"""
         if not kwargs:
@@ -37,8 +38,11 @@ class BaseModel:
 
     def __str__(self):
         """Returns a string representation of the instance"""
+        new_dict = self.__dict__.copy()
+        if '_sa_instance_state' in new_dict:
+            del new_dict['_sa_instance_state']
         cls = (str(type(self)).split('.')[-1]).split('\'')[0]
-        return '[{}] ({}) {}'.format(cls, self.id, self.__dict__)
+        return '[{}] ({}) {}'.format(cls, self.id, new_dict)
 
     def save(self):
         """Updates updated_at with current time when instance is changed"""
@@ -46,6 +50,11 @@ class BaseModel:
         self.updated_at = datetime.now()
         storage.new(self)
         storage.save()
+
+    def delete(self):
+        """Updates updated_at with current time when instance is changed"""
+        from models import storage
+        storage.delete(self)
 
     def to_dict(self):
         """Convert instance into dict format"""
@@ -59,10 +68,3 @@ class BaseModel:
         dictionary['updated_at'] = self.updated_at.isoformat()
 
         return dictionary
-
-    def delete(self):
-        """Delete the current instance from the storage
-        (models.storage) by calling the method delete
-        """
-        from models import storage
-        storage.delete(self)
