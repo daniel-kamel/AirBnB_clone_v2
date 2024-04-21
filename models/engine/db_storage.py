@@ -3,17 +3,16 @@
 from os import getenv
 from models.base_model import Base
 from models.amenity import Amenity
-from models.place import Place, place_amenity
+from models.place import Place
 from models.state import State
 from models.review import Review
 from models.city import City
 from models.user import User
-
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import sessionmaker, scoped_session
 
 
-__classes = {"State": State, "Amenity": Amenity,
+classes = {"State": State, "Amenity": Amenity,
              "City": City, "Place": Place,
              "Review": Review, "User": User}
 
@@ -31,24 +30,30 @@ class DBStorage:
                                                  getenv('HBNB_MYSQL_HOST'),
                                                  getenv('HBNB_MYSQL_DB')),
             pool_pre_ping=True)
-        if getenv('HBNB_ENV') == 'test':
-            Base.metadata.drop_all(self.__engine)
+        session_factory = sessionmaker(bind=self.__engine, expire_on_commit=False)
+        Session = scoped_session(session_factory)
+        self.__session = Session()
+
+        metadata = MetaData()
+        metadata.reflect(bind=self.__engine)
+
+        if getenv("HBNB_ENV") == "test":
+            metadata.drop_all()
+            self.__session.commit()
 
     def all(self, cls=None):
         """query on the current db"""
-        my_dict = {}
+        obj_dict = {}
         if cls is None:
-            for cl in __classes.values():
+            for cl in classes.values():
                 objs = self.__session.query(cl).all()
                 for obj in objs:
-                    key = obj.__class__.__name__ + '.' + obj.id
-                    my_dict[key] = obj
+                    obj_dict[obj.__class__.__name__ + '.' + obj.id] = obj
         else:
-            objs = self.__session.query(cls).all()
+            objs = self.__session.query(classes[cls]).all()
             for obj in objs:
-                key = obj.__class__.__name__ + '.' + obj.id
-                my_dict[key] = obj
-        return my_dict
+                obj_dict[obj.__class__.__name__ + '.' + obj.id] = obj
+        return obj_dict
 
     def new(self, obj):
         """add the object to the current database"""
@@ -60,17 +65,11 @@ class DBStorage:
 
     def delete(self, obj=None):
         """delete from the current database session"""
-        self.__session.delete(obj)
+        if obj is not None:
+            self.__session.delete(obj)
 
     def reload(self):
         """relod from db"""
-        from models.user import User
-        from models.state import State
-        from models.city import City
-        from models.amenity import Amenity
-        from models.place import Place
-        from models.review import Review
-        from models.base_model import BaseModel, Base
         Base.metadata.create_all(self.__engine)
         Session = sessionmaker(bind=self.__engine, expire_on_commit=False)
         self.__session = Session()
