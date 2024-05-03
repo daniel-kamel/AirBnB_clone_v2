@@ -13,6 +13,7 @@ def do_pack():
         local("mkdir -p versions")
         local("tar -cvzf versions/web_static_{}.tgz web_static"
               .format(datetime.now().strftime("%Y%m%d%H%M%S")))
-        return "versions/web_static_{}.tgz".format(datetime.now().strftime("%Y%m%d%H%M%S"))
-    except:
+        return "versions/web_static_{}.tgz"\
+            .format(datetime.now().strftime("%Y%m%d%H%M%S"))
+    except Exception:
         return None
