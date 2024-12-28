@@ -13,8 +13,7 @@ class FileStorage:
         if cls:
             filterd_objects = {}
             for k, v in FileStorage.__objects.items():
-                if isinstance(v, cls):
-                    filterd_objects[k] = v
+                filterd_objects[k] = v
 
             return filterd_objects
         return FileStorage.__objects
