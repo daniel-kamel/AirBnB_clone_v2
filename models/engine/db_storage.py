@@ -1,15 +1,13 @@
 #!/usr/bin/python3
 """This module defines a class to manage database storage for hbnb clone"""
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column
 from sqlalchemy.orm import sessionmaker, scoped_session
-import urllib.parse
-
-from models.base_model import BaseModel, Base
+from models.base_model import Base
 from models.state import State
 from models.city import City
 from models.user import User
-from models.place import Place, place_amenity
+from models.place import Place
 from models.amenity import Amenity
 from models.review import Review
 
@@ -22,35 +20,45 @@ class DBStorage:
     def __init__(self):
         """Initializes the SQL database storage"""
         user = os.getenv('HBNB_MYSQL_USER')
-        pword = os.getenv('HBNB_MYSQL_PWD')
+        pwd = os.getenv('HBNB_MYSQL_PWD')
         host = os.getenv('HBNB_MYSQL_HOST')
         db_name = os.getenv('HBNB_MYSQL_DB')
         env = os.getenv('HBNB_ENV')
         DATABASE_URL = "mysql+mysqldb://{}:{}@{}:3306/{}".format(
-            user, pword, host, db_name
+            user, pwd, host, db_name
         )
-        self.__engine = create_engine(
-            DATABASE_URL,
-            pool_pre_ping=True
-        )
+        self.__engine = create_engine(DATABASE_URL, pool_pre_ping=True)
         if env == 'test':
             Base.metadata.drop_all(self.__engine)
+
+        SessionFactory = sessionmaker(bind=self.__engine)
+        self.__session = scoped_session(SessionFactory)
 
     def all(self, cls=None):
         """Returns a dictionary of models currently in storage"""
         objects = dict()
-        all_classes = (User, State, City, Amenity, Place, Review)
+        all_classes = {
+            'User': User,
+            'State': State,
+            'City': City,
+            'Amenity': Amenity,
+            'Place': Place,
+            'Review': Review
+        }
         if cls is None:
-            for class_type in all_classes:
-                query = self.__session.query(class_type)
-                for obj in query.all():
+            for class_type in all_classes.values():
+                query = self.__session.query(class_type).all()
+                for obj in query:
                     obj_key = '{}.{}'.format(obj.__class__.__name__, obj.id)
                     objects[obj_key] = obj
         else:
-            query = self.__session.query(cls)
-            for obj in query.all():
-                obj_key = '{}.{}'.format(obj.__class__.__name__, obj.id)
-                objects[obj_key] = obj
+            if cls in all_classes:
+                query = self.__session.query(all_classes[cls])
+                for obj in query.all():
+                    obj_key = '{}.{}'.format(obj.__class__.__name__, obj.id)
+                    objects[obj_key] = obj
+            else:
+                raise ValueError("Invalid class name")
         return objects
 
     def delete(self, obj=None):
