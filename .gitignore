@@ -4,3 +4,4 @@ __pycache__
 Pipfile*
 *venv
 task_check
+fabfile.py
